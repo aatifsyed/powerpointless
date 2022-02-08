@@ -16,7 +16,7 @@ mypy = "^0.931"
 pyinstaller = "4.9"
 
 [tool.poetry.scripts]
-powerpointless = "powerpointless:_cli_main"
+powerpointless-cli = "powerpointless:_cli_main"
 powerpointless-gui = "powerpointless:_gui_main"
 
 [build-system]
