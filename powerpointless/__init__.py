@@ -1,7 +1,7 @@
 import argparse
 import logging
 import sys
-from typing import BinaryIO, Optional, TextIO, IO, Any
+from typing import BinaryIO, List, Optional, TextIO, IO, Any
 
 import argcomplete
 from pptx import Presentation as presentation
@@ -14,6 +14,34 @@ from pptx.slide import (
     Slides,
     SlideShapes,
 )
+
+
+def build_slides(template: Presentation, lines: List[str]) -> Presentation:
+    try:
+        slide_master: SlideMaster = template.slide_master
+    except Exception as e:
+        raise RuntimeError(
+            "Provided presentation must have at least one slide master attached"
+        ) from e
+
+    try:
+        layout: SlideLayout = slide_master.slide_layouts[0]
+    except Exception as e:
+        raise RuntimeError("Slide master must have at least one layout") from e
+
+    slides: Slides = template.slides
+
+    for line in lines:
+        new_slide: Slide = slides.add_slide(layout)
+        shapes: SlideShapes = new_slide.shapes
+        placeholders: SlidePlaceholders = shapes.placeholders
+        try:
+            placeholders[0].text = line
+        except Exception as e:
+            raise RuntimeError(
+                "Provided layout must use a textbox as the first placeholder"
+            )
+    return template
 
 
 class MyFileType(argparse.FileType):
@@ -37,7 +65,7 @@ class MyFileType(argparse.FileType):
 logger = logging.getLogger(__name__)
 
 
-def main() -> int:
+def cli_main() -> int:
     logger.addHandler(logging.StreamHandler())
     logger.setLevel("DEBUG")
 
@@ -78,37 +106,14 @@ def main() -> int:
     output: BinaryIO = args.output
 
     try:
-        prs: Presentation = presentation(template)
+        tmpl: Presentation = presentation(template)
     except Exception as e:
         raise RuntimeError("Couldn't open file as a powerpoint") from e
 
-    try:
-        slide_master: SlideMaster = prs.slide_master
-    except Exception as e:
-        raise RuntimeError(
-            "Provided presentation must have at least one slide master attached"
-        ) from e
-
-    try:
-        layout: SlideLayout = slide_master.slide_layouts[0]
-    except Exception as e:
-        raise RuntimeError("Slide master must have at least one layout") from e
-
-    slides: Slides = prs.slides
-
-    for line in input.readlines():
-        new_slide: Slide = slides.add_slide(layout)
-        shapes: SlideShapes = new_slide.shapes
-        placeholders: SlidePlaceholders = shapes.placeholders
-        try:
-            placeholders[0].text = line
-        except Exception as e:
-            raise RuntimeError(
-                "Provided layout must a textbox as the first placeholder"
-            )
+    prs = build_slides(template=tmpl, lines=input.readlines())
 
     prs.save(output)
 
 
 def _main():
-    sys.exit(main())
+    sys.exit(cli_main())

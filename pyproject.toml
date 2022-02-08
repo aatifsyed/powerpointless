@@ -7,11 +7,13 @@ authors = ["Aatif Syed <aatifsyedyp@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 argcomplete = "^2.0.0"
+python-pptx = "^0.6.21"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
 black = "^21.12b0"
 mypy = "^0.931"
+pyinstaller = "4.9"
 
 [tool.poetry.scripts]
 powerpointless = "powerpointless:_main"
