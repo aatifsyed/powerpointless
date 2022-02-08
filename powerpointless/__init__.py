@@ -1,7 +1,7 @@
 import argparse
 import logging
 import sys
-from typing import BinaryIO, List, Optional, TextIO, IO, Any
+from typing import IO, Any, BinaryIO, List, Optional, TextIO
 
 import argcomplete
 from pptx import Presentation as presentation
@@ -14,6 +14,8 @@ from pptx.slide import (
     Slides,
     SlideShapes,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def build_slides(template: Presentation, lines: List[str]) -> Presentation:
@@ -44,6 +46,17 @@ def build_slides(template: Presentation, lines: List[str]) -> Presentation:
     return template
 
 
+def common_main(input: TextIO, output: BinaryIO, template: Optional[BinaryIO]):
+    try:
+        tmpl: Presentation = presentation(template)
+    except Exception as e:
+        raise RuntimeError("Couldn't open file as a powerpoint") from e
+
+    prs = build_slides(template=tmpl, lines=input.readlines())
+
+    prs.save(output)
+
+
 class MyFileType(argparse.FileType):
     def __call__(self, string: str) -> IO[Any]:
         """stdlib argparse doesn't handle binary mode..."""
@@ -58,11 +71,7 @@ class MyFileType(argparse.FileType):
                     return sys.stdout.buffer
                 else:
                     return sys.stdout
-        else:
-            return super().__call__(string)
-
-
-logger = logging.getLogger(__name__)
+        return super().__call__(string)
 
 
 def cli_main() -> int:
@@ -101,19 +110,71 @@ def cli_main() -> int:
 
     logger.debug(args)
 
-    template: Optional[BinaryIO] = args.template
-    input: TextIO = args.input
-    output: BinaryIO = args.output
+    common_main(input=args.input, output=args.output, template=args.template)
+
+    return 0
+
+
+def gui_main() -> int:
+    logger.addHandler(logging.StreamHandler())
+    logger.setLevel("DEBUG")
+    import traceback
+    from tkinter import Tk, filedialog, messagebox
+
+    root = Tk()
+    root.overrideredirect(True)  # Stop flickering
+    root.withdraw()  # Hide
 
     try:
-        tmpl: Presentation = presentation(template)
+        if messagebox.askyesno(
+            title="Do you wish to provide a template?",
+            message="Do you wish to provide a template?\n\n"
+            "The template must be a pptx file. "
+            "The first master slide's first template slide's first placeholder will be populated for each new slide.",
+            parent=root,
+        ):
+            template: Optional[BinaryIO] = filedialog.askopenfile(
+                mode="rb", title="Select template powerpoint.", parent=root
+            )
+        else:
+            template = None
+
+        input: Optional[TextIO] = filedialog.askopenfile(
+            mode="r",
+            title="Select input file. " "A slide will be created per line. ",
+            parent=root,
+        )
+
+        output: Optional[BinaryIO] = filedialog.asksaveasfile(
+            mode="wb",
+            confirmoverwrite=True,
+            title="Select destination file. "
+            "This will contain the final slides, according to the template. ",
+            parent=root,
+        )
+        logger.debug(f"{template=}, {input=}, {output=}")
+
+        if input is None or output is None:
+            messagebox.showerror(
+                "Input or output not specified. ",
+                message="Input or output not specified. " f"{input=}, {output=}",
+            )
+            return 1
+        common_main(input=input, output=output, template=template)
+        return 0
     except Exception as e:
-        raise RuntimeError("Couldn't open file as a powerpoint") from e
+        messagebox.showerror(
+            title="An error occured. ",
+            message=f"{e}\n"
+            f"{traceback.format_exc()}\n\n"
+            "Please inform the developer. ",
+        )
+        raise
 
-    prs = build_slides(template=tmpl, lines=input.readlines())
 
-    prs.save(output)
-
-
-def _main():
+def _cli_main():
     sys.exit(cli_main())
+
+
+def _gui_main():
+    sys.exit(gui_main())

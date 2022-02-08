@@ -5,7 +5,7 @@ description = ""
 authors = ["Aatif Syed <aatifsyedyp@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = ">=3.8,<3.11"
 argcomplete = "^2.0.0"
 python-pptx = "^0.6.21"
 
@@ -16,7 +16,8 @@ mypy = "^0.931"
 pyinstaller = "4.9"
 
 [tool.poetry.scripts]
-powerpointless = "powerpointless:_main"
+powerpointless = "powerpointless:_cli_main"
+powerpointless-gui = "powerpointless:_gui_main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
