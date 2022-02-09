@@ -1,50 +1,16 @@
 import argparse
 import logging
 import sys
-from typing import IO, Any, BinaryIO, List, Optional, TextIO
+from pathlib import Path
+from typing import IO, Any, BinaryIO, Optional, TextIO
 
 import argcomplete
 from pptx import Presentation as presentation
 from pptx.presentation import Presentation
-from pptx.slide import (
-    Slide,
-    SlideLayout,
-    SlideMaster,
-    SlidePlaceholders,
-    Slides,
-    SlideShapes,
-)
+
+from .build_slides import build_slides
 
 logger = logging.getLogger(__name__)
-
-
-def build_slides(template: Presentation, lines: List[str]) -> Presentation:
-    try:
-        slide_master: SlideMaster = template.slide_master
-    except Exception as e:
-        raise RuntimeError(
-            "Provided presentation must have at least one slide master attached"
-        ) from e
-
-    try:
-        layout: SlideLayout = slide_master.slide_layouts[0]
-    except Exception as e:
-        raise RuntimeError("Slide master must have at least one layout") from e
-
-    slides: Slides = template.slides
-
-    for i, line in enumerate(lines):
-        new_slide: Slide = slides.add_slide(layout)
-        shapes: SlideShapes = new_slide.shapes
-        placeholders: SlidePlaceholders = shapes.placeholders
-        try:
-            placeholders[0].text = line
-        except Exception as e:
-            raise RuntimeError(
-                "Provided layout must use a textbox as the first placeholder"
-            )
-        logger.info(f"Done slide {i}/{len(lines)}: {line[:10]}...")
-    return template
 
 
 def common_main(input: TextIO, output: BinaryIO, template: Optional[BinaryIO]):
