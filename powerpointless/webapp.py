@@ -1,6 +1,11 @@
+from io import BytesIO
+from typing import BinaryIO
+
 import streamlit as st
 from pptx import Presentation as presentation
 from pptx.presentation import Presentation
+
+from build_slides import build_slides
 
 st.set_page_config(page_title="Powerpointless", page_icon="🍬")
 
@@ -39,6 +44,37 @@ source_type = st.radio(
     label="Select source type", options=["Upload file", "Input text"]
 )
 if source_type == "Upload file":
-    text_source = st.file_uploader("Text Source")
+    f = st.file_uploader("Text Source")
+    if f is not None:
+        f: BinaryIO
+        try:
+            text_source = f.read().decode()
+        except Exception as e:
+            st.error("Couldn't open file as plain text")
+            st.exception(e)
+            text_source = None
+    else:
+        text_source = None
 elif source_type == "Input text":
-    text_source = st.text_area(label="Write text", value="Hi my name's Imogen")
+    text_source = st.text_area(label="Write text", value="Hi my name's Imogen") or None
+
+st.write("# Result")
+if template is None:
+    st.error("Please add a template.")
+if text_source is None:
+    st.error("Please add a text source.")
+if None not in (template, text_source):
+    with st.spinner(text="Creating powerpoint..."):
+        try:
+            generated = build_slides(template=template, lines=text_source.splitlines())
+            b = BytesIO()
+            generated.save(b)
+            st.download_button(
+                label="Generated presentation",
+                data=b,
+                file_name="generated.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            )
+        except Exception as e:
+            st.error("Couldn't generate presentation. Please check your inputs")
+            st.exception(e)
