@@ -33,7 +33,7 @@ def build_slides(template: Presentation, lines: List[str]) -> Presentation:
 
     slides: Slides = template.slides
 
-    for line in lines:
+    for i, line in enumerate(lines):
         new_slide: Slide = slides.add_slide(layout)
         shapes: SlideShapes = new_slide.shapes
         placeholders: SlidePlaceholders = shapes.placeholders
@@ -43,6 +43,7 @@ def build_slides(template: Presentation, lines: List[str]) -> Presentation:
             raise RuntimeError(
                 "Provided layout must use a textbox as the first placeholder"
             )
+        logger.info(f"Done slide {i}/{len(lines)}: {line[:10]}...")
     return template
 
 
