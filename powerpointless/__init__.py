@@ -1,27 +1,15 @@
 import argparse
 import logging
 import sys
-from pathlib import Path
 from typing import IO, Any, BinaryIO, Optional, TextIO
 
 import argcomplete
 from pptx import Presentation as presentation
 from pptx.presentation import Presentation
 
-from .build_slides import build_slides
+from .core import create_subtitles, extract_subtitles
 
 logger = logging.getLogger(__name__)
-
-
-def common_main(input: TextIO, output: BinaryIO, template: Optional[BinaryIO]):
-    try:
-        tmpl: Presentation = presentation(template)
-    except Exception as e:
-        raise RuntimeError("Couldn't open file as a powerpoint") from e
-
-    prs = build_slides(template=tmpl, lines=input.readlines())
-
-    prs.save(output)
 
 
 class MyFileType(argparse.FileType):
@@ -45,10 +33,14 @@ def cli_main() -> int:
     logger.addHandler(logging.StreamHandler())
     logger.setLevel("DEBUG")
 
-    parser = argparse.ArgumentParser(
-        description="Creates a slide per line of a user provided file. "
+    parser = argparse.ArgumentParser(description="Work with powerpoint subtitles. ")
+
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
+    create_subtitles_parser = subparsers.add_parser(
+        "create-subtitles", help="Create a powerpoint from a plain text file. "
     )
-    parser.add_argument(
+
+    create_subtitles_parser.add_argument(
         "-t",
         "--template",
         type=argparse.FileType(mode="rb"),
@@ -58,90 +50,74 @@ def cli_main() -> int:
         "Defaults to an internal layout. ",
         default=None,
     )
-    parser.add_argument(
+    create_subtitles_parser.add_argument(
         "-i",
         "--input",
         type=MyFileType("r"),
         help="A new slide will be created for each line in this file. ",
         required=True,
     )
-    parser.add_argument(
+    create_subtitles_parser.add_argument(
         "-o",
         "--output",
         type=MyFileType("wb"),
         help="Write resulting presentation to this file. ",
         required=True,
     )
+
+    extract_subtitles_parser = subparsers.add_parser(
+        "extract-subtitles", help="Convert a powerpoint into a plain text file. "
+    )
+    extract_subtitles_parser.add_argument(
+        "-i",
+        "--input",
+        type=MyFileType("rb"),
+        help="A new line will be created for each textbox in each slide in this powerpoint. ",
+        required=True,
+    )
+    extract_subtitles_parser.add_argument(
+        "-o",
+        "--output",
+        type=MyFileType("w"),
+        help="Text file containing the powerpoint contents. ",
+        required=True,
+    )
+
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
     logger.debug(args)
 
-    common_main(input=args.input, output=args.output, template=args.template)
+    if args.subcommand == "create-subtitles":
+        input: TextIO = args.input
+        output: BinaryIO = args.output
+        template: Optional[BinaryIO] = args.template
 
-    return 0
+        try:
+            tmpl: Presentation = presentation(template)
+        except Exception as e:
+            raise RuntimeError("Couldn't open file as a powerpoint") from e
 
+        create_subtitles(template=tmpl, lines=input.readlines()).save(output)
 
-def gui_main() -> int:
-    logger.addHandler(logging.StreamHandler())
-    logger.setLevel("DEBUG")
-    import traceback
-    from tkinter import Tk, filedialog, messagebox
-
-    root = Tk()
-    root.overrideredirect(True)  # Stop flickering
-    root.withdraw()  # Hide
-
-    try:
-        if messagebox.askyesno(
-            title="Do you wish to provide a template?",
-            message="Do you wish to provide a template?\n\n"
-            "The template must be a pptx file. "
-            "The first master slide's first template slide's first placeholder will be populated for each new slide.",
-            parent=root,
-        ):
-            template: Optional[BinaryIO] = filedialog.askopenfile(
-                mode="rb", title="Select template powerpoint.", parent=root
-            )
-        else:
-            template = None
-
-        input: Optional[TextIO] = filedialog.askopenfile(
-            mode="r",
-            title="Select input file. " "A slide will be created per line. ",
-            parent=root,
-        )
-
-        output: Optional[BinaryIO] = filedialog.asksaveasfile(
-            mode="wb",
-            confirmoverwrite=True,
-            title="Select destination file. "
-            "This will contain the final slides, according to the template. ",
-            parent=root,
-        )
-        logger.debug(f"{template=}, {input=}, {output=}")
-
-        if input is None or output is None:
-            messagebox.showerror(
-                "Input or output not specified. ",
-                message="Input or output not specified. " f"{input=}, {output=}",
-            )
-            return 1
-        common_main(input=input, output=output, template=template)
         return 0
-    except Exception as e:
-        messagebox.showerror(
-            title="An error occured. ",
-            message=f"{e}\n"
-            f"{traceback.format_exc()}\n\n"
-            "Please inform the developer. ",
-        )
-        raise
+
+    elif args.subcommand == "extract-subtitles":
+        input: BinaryIO = args.input
+        output: TextIO = args.output
+
+        try:
+            source: Presentation = presentation(input)
+        except Exception as e:
+            raise RuntimeError("Coulnd't open file as a powerpoint") from e
+
+        output.write("\n".join(extract_subtitles(source)))
+
+        return 0
+
+    else:
+        raise RuntimeError("Unreachable")
 
 
 def _cli_main():
     sys.exit(cli_main())
-
-
-def _gui_main():
-    sys.exit(gui_main())

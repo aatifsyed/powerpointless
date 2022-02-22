@@ -3,6 +3,7 @@ from typing import List
 
 from pptx import Presentation as presentation
 from pptx.presentation import Presentation
+from pptx.shapes.shapetree import Shape
 from pptx.slide import (
     Slide,
     SlideLayout,
@@ -15,7 +16,7 @@ from pptx.slide import (
 logger = logging.getLogger(__name__)
 
 
-def build_slides(template: Presentation, lines: List[str]) -> Presentation:
+def create_subtitles(template: Presentation, lines: List[str]) -> Presentation:
     try:
         slide_master: SlideMaster = template.slide_master
     except Exception as e:
@@ -41,3 +42,18 @@ def build_slides(template: Presentation, lines: List[str]) -> Presentation:
                 "Provided layout must use a textbox as the first placeholder"
             )
     return template
+
+
+def extract_subtitles(source: Presentation) -> List[str]:
+    lis: List[str] = []
+
+    slides: Slides = source.slides
+    slide: Slide
+    for slide in slides:
+        shapes: SlideShapes = slide.shapes
+        shape: Shape
+        for shape in shapes:
+            if shape.has_text_frame:
+                text_frame = shape.text_frame
+                lis.append(text_frame.text)
+    return lis

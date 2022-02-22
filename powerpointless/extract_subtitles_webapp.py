@@ -5,7 +5,7 @@ import streamlit as st
 from pptx import Presentation as presentation
 from pptx.presentation import Presentation
 
-from build_slides import build_slides
+from powerpointless.core import create_subtitles
 
 st.set_page_config(page_title="Powerpointless", page_icon="🍬")
 
@@ -66,7 +66,9 @@ if text_source is None:
 if None not in (template, text_source):
     with st.spinner(text="Creating powerpoint..."):
         try:
-            generated = build_slides(template=template, lines=text_source.splitlines())
+            generated = create_subtitles(
+                template=template, lines=text_source.splitlines()
+            )
             b = BytesIO()
             generated.save(b)
             st.download_button(
