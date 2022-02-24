@@ -55,5 +55,6 @@ def extract_subtitles(source: Presentation) -> List[str]:
         for shape in shapes:
             if shape.has_text_frame:
                 text_frame = shape.text_frame
-                lis.append(text_frame.text)
+                if len(text_frame.text) > 0:
+                    lis.append(text_frame.text.rstrip())
     return lis

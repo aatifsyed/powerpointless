@@ -4,8 +4,10 @@ import sys
 from typing import IO, Any, BinaryIO, Optional, TextIO
 
 import argcomplete
+from logging_actions import log_level_action
 from pptx import Presentation as presentation
 from pptx.presentation import Presentation
+from rich.logging import RichHandler
 
 from .core import create_subtitles, extract_subtitles
 
@@ -30,10 +32,12 @@ class MyFileType(argparse.FileType):
 
 
 def cli_main() -> int:
-    logger.addHandler(logging.StreamHandler())
-    logger.setLevel("DEBUG")
+    logger.addHandler(RichHandler())
 
     parser = argparse.ArgumentParser(description="Work with powerpoint subtitles. ")
+    parser.add_argument(
+        "-l", "--log-level", action=log_level_action(logger), default="debug"
+    )
 
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
     create_subtitles_parser = subparsers.add_parser(

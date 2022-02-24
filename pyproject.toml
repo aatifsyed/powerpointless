@@ -9,6 +9,8 @@ python = ">=3.8,<3.11"
 argcomplete = "^2.0.0"
 python-pptx = "^0.6.21"
 streamlit = "^1.5.1"
+logging-actions = "^0.1.6"
+rich = "^11.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
