@@ -5,7 +5,7 @@ import streamlit as st
 from pptx import Presentation as presentation
 from pptx.presentation import Presentation
 
-from .core import create_subtitles
+from powerpointless.core import create_subtitles
 
 st.set_page_config(page_title="Create Subtitles | Powerpointless", page_icon="🍬")
 
